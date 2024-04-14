@@ -190,14 +190,14 @@ class HFDataset(object):
     def test(self):
         return self._dataset["test"]
 
-    def validate(self):
-        return self._dataset["validate"]
+    def validation(self):
+        return self._dataset["validation"]
 
 
 if __name__ == '__main__':
     dataset = HFDataset().dataset
     print(len(dataset['train']))
     print(len(dataset['test']))
-    print(len(dataset['validate']))
+    print(len(dataset['validation']))
     print("List of tags: ", dataset['train'].features['ner_tags'].feature.names)
     print("First sample: ", dataset['train'][0])
