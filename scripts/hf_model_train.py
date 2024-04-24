@@ -41,24 +41,19 @@ if __name__ == "__main__":
     learning_rate = 2e-5
     batch_size = 16
     model_root_dir = "."
-
     hf_pretrained_model_checkpoint = "distilbert-base-uncased"
     hf_pretrained_tokenizer_checkpoint = "distilbert-base-uncased"
-
     hf_dataset = HFDataset()
-
-    hf_preprocessor = HFTokenizer.init_vf(hf_pretrained_tokenizer_checkpoint=hf_pretrained_tokenizer_checkpoint)
-
+    dataset = HFDataset().dataset
     hf_model = AutoModelForTokenClassification.from_pretrained(hf_pretrained_model_checkpoint,
-                                                            num_labels=len(hf_dataset.labels))
-
+                                                    num_labels=len(hf_dataset.labels))
     hf_model.config.id2label = hf_dataset.id2label
     hf_model.config.label2id = hf_dataset.label2id
-
-    tokenized_datasets = hf_dataset.dataset.map(hf_preprocessor.tokenize_and_align_labels, batched=True)
-
-    # ---------------------------------------------------------------------------------------------------
-
+    hf_preprocessor = HFTokenizer.init_vf(hf_pretrained_tokenizer_checkpoint=hf_pretrained_tokenizer_checkpoint)
+    train_tokenized_inputs = hf_preprocessor.tokenize_and_align_labels(dataset['train'])
+    #train_tokenized_datasets = hf_dataset.map(train_tokenized_inputs, batched=True)
+    validate_tokenized_inputs = hf_preprocessor.tokenize_and_align_labels(dataset['validate'])
+    #validate_tokenized_datasets = hf_dataset.map(validate_tokenized_inputs, batched=True)
     args = TrainingArguments(
         f"hf",
         evaluation_strategy="epoch",
@@ -68,40 +63,31 @@ if __name__ == "__main__":
         num_train_epochs=max_epochs,
         weight_decay=0.01,
     )
-
     data_collator = DataCollatorForTokenClassification(hf_preprocessor.tokenizer)
-
     trainer = Trainer(
         hf_model,
         args,
-        train_dataset=tokenized_datasets["train"],
-        eval_dataset=tokenized_datasets["test"],
+        train_dataset=train_tokenized_inputs,
+        eval_dataset=validate_tokenized_inputs,
         data_collator=data_collator,
         tokenizer=hf_preprocessor.tokenizer,
         compute_metrics=lambda p: compute_metrics(p=p, label_list=hf_dataset.labels)
     )
-
     trainer.train()
     trainer.evaluate()
-
-    # Predictions on test dataset and evaluation
-
-    predictions, labels, _ = trainer.predict(tokenized_datasets["test"])
+    test_tokenized_inputs = hf_preprocessor.tokenize_and_align_labels(dataset['test'])
+    #test_tokenized_datasets = hf_dataset.map(test_tokenized_inputs, batched=True)
+    predictions, labels, _ = trainer.predict(test_tokenized_inputs)
     predictions = np.argmax(predictions, axis=2)
-
-    # Remove ignored index (special tokens)
     true_predictions = [
         [hf_dataset.labels[p] for (p, l) in zip(prediction, label) if l != -100]
         for prediction, label in zip(predictions, labels)
     ]
-
     true_labels = [
         [hf_dataset.labels[l] for (p, l) in zip(prediction, label) if l != -100]
         for prediction, label in zip(predictions, labels)
     ]
-
     results = metric.compute(predictions=true_predictions, references=true_labels)
     print(results)
-
     out_dir = os.path.expanduser(model_root_dir) + "/" + model_n_version
     trainer.save_model(out_dir)

@@ -30,6 +30,7 @@ class HFTokenizer(object):
                                            is_split_into_words=True)
         labels = []
         for i, label in enumerate(examples["ner_tags"]):
+            print(i)
             word_ids = tokenized_inputs.word_ids(batch_index=i)
             previous_word_idx = None
             label_ids = []
@@ -46,18 +47,15 @@ class HFTokenizer(object):
                 else:
                     label_ids.append(label[word_idx] if label_all_tokens else -100)
                 previous_word_idx = word_idx
-
             labels.append(label_ids)
-
+        print('enumerate(examples["ner_tags"]-end')
         tokenized_inputs["labels"] = labels
         return tokenized_inputs
 
 
 if __name__ == '__main__':
-
-    hf_pretrained_tokenizer_checkpoint = "distilbert-base-uncased"
+    distilbert_checkpoint = "distilbert-base-uncased"
+    hf_preprocessor = HFTokenizer.init_vf(hf_pretrained_tokenizer_checkpoint=distilbert_checkpoint)
     dataset = HFDataset().dataset
-
-    hf_preprocessor = HFTokenizer.init_vf(hf_pretrained_tokenizer_checkpoint=hf_pretrained_tokenizer_checkpoint)
-
-    tokenized_datasets = dataset.map(hf_preprocessor.tokenize_and_align_labels, batched=True)
+    tokenized_inputs = hf_preprocessor.tokenize_and_align_labels(dataset['test'])
+    print(len(tokenized_inputs))
