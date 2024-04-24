@@ -23,6 +23,7 @@ API Keys enable huggingface training scripts to log training runs in wandb.ai to
 
 To train the model, run the following command:
 ```
+export TOKENIZERS_PARALLELISM=true
 cd scripts
 python hf_model_train.py
 ```

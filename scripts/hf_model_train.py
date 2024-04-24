@@ -50,10 +50,8 @@ if __name__ == "__main__":
     hf_model.config.id2label = hf_dataset.id2label
     hf_model.config.label2id = hf_dataset.label2id
     hf_preprocessor = HFTokenizer.init_vf(hf_pretrained_tokenizer_checkpoint=hf_pretrained_tokenizer_checkpoint)
-    train_tokenized_inputs = hf_preprocessor.tokenize_and_align_labels(dataset['train'])
-    #train_tokenized_datasets = hf_dataset.map(train_tokenized_inputs, batched=True)
-    validate_tokenized_inputs = hf_preprocessor.tokenize_and_align_labels(dataset['validate'])
-    #validate_tokenized_datasets = hf_dataset.map(validate_tokenized_inputs, batched=True)
+    train_tokenized_datasets = hf_dataset.dataset['train'].map(hf_preprocessor.tokenize_and_align_labels, batched=False)
+    validate_tokenized_datasets = hf_dataset.dataset['validation'].map(hf_preprocessor.tokenize_and_align_labels, batched=False)
     args = TrainingArguments(
         f"hf",
         evaluation_strategy="epoch",
@@ -67,17 +65,16 @@ if __name__ == "__main__":
     trainer = Trainer(
         hf_model,
         args,
-        train_dataset=train_tokenized_inputs,
-        eval_dataset=validate_tokenized_inputs,
+        train_dataset=train_tokenized_datasets,
+        eval_dataset=validate_tokenized_datasets,
         data_collator=data_collator,
         tokenizer=hf_preprocessor.tokenizer,
         compute_metrics=lambda p: compute_metrics(p=p, label_list=hf_dataset.labels)
     )
     trainer.train()
     trainer.evaluate()
-    test_tokenized_inputs = hf_preprocessor.tokenize_and_align_labels(dataset['test'])
-    #test_tokenized_datasets = hf_dataset.map(test_tokenized_inputs, batched=True)
-    predictions, labels, _ = trainer.predict(test_tokenized_inputs)
+    test_tokenized_datasets = hf_dataset.dataset['test'].map(hf_preprocessor.tokenize_and_align_labels, batched=False)
+    predictions, labels, _ = trainer.predict(test_tokenized_datasets)
     predictions = np.argmax(predictions, axis=2)
     true_predictions = [
         [hf_dataset.labels[p] for (p, l) in zip(prediction, label) if l != -100]
