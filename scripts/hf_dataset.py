@@ -15,9 +15,9 @@ _CITATION = """"""
 _DESCRIPTION = """"""
 
 _URL = "https://huggingface.co/datasets/teamzalenski/astroentities/raw/main/"
-_TRAINING_FILE = "train-small.jsonl"
-_DEV_FILE = "validate-small.jsonl"
-_TEST_FILE = "test-small.jsonl"
+_TRAINING_FILE = "train-small.txt"
+_DEV_FILE = "validate-small.txt"
+_TEST_FILE = "test-small.txt"
 
 
 class Config(datasets.BuilderConfig):
@@ -138,20 +138,42 @@ class HF(datasets.GeneratorBasedBuilder):
         ]
 
     def _generate_examples(self, filepath):
-        print("Generating examples from = %s", filepath)
-        labeled_paper = pd.read_json(path_or_buf=filepath, lines=True)
-        current_tokens = []
-        current_labels = []
-        for i, p in labeled_paper.iterrows():
-            for t in p['tokens']:
-                current_tokens.append(str(t))
-            for l in p['ner_tags']:
-                current_labels.append(str(l))
-            yield i, {
-                "id": str(i),
-                "tokens": current_tokens,
-                "ner_tags": current_labels,
-            }
+        logger.info("⏳ Generating examples from = %s", filepath)
+        with open(filepath, encoding="utf-8") as f:
+            current_tokens = []
+            current_labels = []
+            sentence_counter = 0
+            for row in f:
+                row = row.rstrip()
+                if row:
+                    token, label = row.split(" ")
+                    current_tokens.append(token)
+                    current_labels.append(label)
+                else:
+                    # New sentence
+                    if not current_tokens:
+                        # Consecutive empty lines will cause empty sentences
+                        continue
+                    assert len(current_tokens) == len(current_labels), "💔 between len of tokens & labels"
+                    sentence = (
+                        sentence_counter,
+                        {
+                            "id": str(sentence_counter),
+                            "tokens": current_tokens,
+                            "ner_tags": current_labels,
+                        },
+                    )
+                    sentence_counter += 1
+                    current_tokens = []
+                    current_labels = []
+                    yield sentence
+            # Don't forget last sentence in dataset 🧐
+            if current_tokens:
+                yield sentence_counter, {
+                    "id": str(sentence_counter),
+                    "tokens": current_tokens,
+                    "ner_tags": current_labels,
+                }
 
 class HFDataset(object):
     """
