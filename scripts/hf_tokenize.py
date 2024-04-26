@@ -12,7 +12,8 @@ class HFTokenizer(object):
 
     def __init__(self,
                  hf_pretrained_tokenizer_checkpoint):
-        self._tokenizer = AutoTokenizer.from_pretrained(hf_pretrained_tokenizer_checkpoint)
+        self.model_max_length=512
+        self._tokenizer = AutoTokenizer.from_pretrained(hf_pretrained_tokenizer_checkpoint,model_max_length=self.model_max_length)
 
     @property
     def tokenizer(self):
@@ -26,34 +27,25 @@ class HFTokenizer(object):
                                   examples,
                                   label_all_tokens=True):
         tokenized_inputs = self._tokenizer(examples["tokens"],
-                                           truncation=True,
+                                           padding="do_not_pad",
+                                           truncation="only_first",
                                            is_split_into_words=True)
         labels = []
-        for i, label in enumerate(examples["ner_tags"]):
-            word_ids = tokenized_inputs.word_ids(batch_index=i)
-            previous_word_idx = None
-            label_ids = []
-            for word_idx in word_ids:
-                # Special tokens have a word id that is None. We set the label to -100 so they are automatically
-                # ignored in the loss function.
-                if word_idx is None:
-                    label_ids.append(-100)
-                # We set the label for the first token of each word.
-                elif word_idx != previous_word_idx:
-                    label_ids.append(label[word_idx])
-                # For the other tokens in a word, we set the label to either the current label or -100, depending on
-                # the label_all_tokens flag.
-                else:
-                    label_ids.append(label[word_idx] if label_all_tokens else -100)
-                previous_word_idx = word_idx
-            labels.append(label_ids)
+        label_ids = []
+        ner_tags = examples["ner_tags"][0]
+        for i in range(min(len(ner_tags),self.model_max_length)):
+            label_ids.append(ner_tags[i])
+        labels.append(label_ids)
         tokenized_inputs["labels"] = labels
         return tokenized_inputs
 
 
 if __name__ == '__main__':
-    distilbert_checkpoint = "distilbert-base-uncased"
-    hf_preprocessor = HFTokenizer.init_vf(hf_pretrained_tokenizer_checkpoint=distilbert_checkpoint)
+
+    hf_pretrained_tokenizer_checkpoint = "distilbert-base-uncased"
     dataset = HFDataset().dataset
-    tokenized_inputs = hf_preprocessor.tokenize_and_align_labels(dataset['test'])
-    print(len(tokenized_inputs))
+
+    hf_preprocessor = HFTokenizer.init_vf(hf_pretrained_tokenizer_checkpoint=hf_pretrained_tokenizer_checkpoint)
+
+    tokenized_datasets = dataset.map(hf_preprocessor.tokenize_and_align_labels, batched=True)
+    print(len(tokenized_datasets))

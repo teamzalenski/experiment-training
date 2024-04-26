@@ -147,6 +147,7 @@ class HF(datasets.GeneratorBasedBuilder):
                 row = row.rstrip()
                 if row:
                     token, label = row.split(" ")
+                    #print(token, label)
                     current_tokens.append(token)
                     current_labels.append(label)
                 else:
@@ -217,9 +218,7 @@ class HFDataset(object):
 
 
 if __name__ == '__main__':
-    dataset = HFDataset().dataset
-    print(len(dataset['train']))
-    print(len(dataset['test']))
-    print(len(dataset['validation']))
+    hf_dataset = HFDataset()
+    dataset = hf_dataset.dataset
+    print("List of Label2Id: ", hf_dataset.label2id)
     print("List of tags: ", dataset['train'].features['ner_tags'].feature.names)
-    print("First sample: ", dataset['train'][0])

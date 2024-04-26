@@ -50,14 +50,38 @@ if __name__ == "__main__":
                                                     num_labels=len(hf_dataset.labels))
     hf_model.config.id2label = hf_dataset.id2label
     hf_model.config.label2id = hf_dataset.label2id
+    batched=True
     hf_preprocessor = HFTokenizer.init_vf(hf_pretrained_tokenizer_checkpoint=hf_pretrained_tokenizer_checkpoint)
-    tokenized_datasets = hf_dataset.dataset.map(hf_preprocessor.tokenize_and_align_labels, batched=True)
+    tokenized_datasets = hf_dataset.dataset.map(hf_preprocessor.tokenize_and_align_labels, batched=batched)
+    tokenized_datasets = tokenized_datasets.remove_columns(["id","tokens","ner_tags"])
+    print(tokenized_datasets.column_names)
+
+    #print(len(tokenized_datasets['train'][0]['tokens']))
+    #print(len(tokenized_datasets['train'][0]['ner_tags']))
+    print(len(tokenized_datasets['train'][0]['input_ids']))
+    print(len(tokenized_datasets['train'][0]['labels']))
+
+    #print(len(tokenized_datasets['validation'][0]['tokens']))
+    #print(len(tokenized_datasets['validation'][0]['ner_tags']))
+    print(len(tokenized_datasets['validation'][0]['input_ids']))
+    print(len(tokenized_datasets['validation'][0]['labels']))
+
+    #print(len(tokenized_datasets['test'][0]['tokens']))
+    #print(len(tokenized_datasets['test'][0]['ner_tags']))
+    print(len(tokenized_datasets['test'][0]['input_ids']))
+    print(len(tokenized_datasets['test'][0]['labels']))
+
+    #print(tokenized_datasets['train'][0])
+    #print(tokenized_datasets['validation'][0])
+    #print(tokenized_datasets['test'][0])
+
     args = TrainingArguments(
         f"hf",
         evaluation_strategy="epoch",
         learning_rate=learning_rate,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
+        remove_unused_columns=False,
         num_train_epochs=max_epochs,
         weight_decay=0.01,
     )
