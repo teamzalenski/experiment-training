@@ -15,9 +15,9 @@ _CITATION = """"""
 _DESCRIPTION = """"""
 
 _URL = "https://huggingface.co/datasets/teamzalenski/astroentities/raw/main/"
-_TRAINING_FILE = "train-small.txt"
-_DEV_FILE = "validate-small.txt"
-_TEST_FILE = "test-small.txt"
+_TRAINING_FILE = "train.txt"
+_DEV_FILE = "validate.txt"
+_TEST_FILE = "test.txt"
 
 
 class Config(datasets.BuilderConfig):
